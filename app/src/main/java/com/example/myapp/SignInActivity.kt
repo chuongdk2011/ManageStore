@@ -127,13 +127,6 @@ class SignInActivity : AppCompatActivity() {
                 .logInWithReadPermissions(this, listOf("public_profile,email"))
 
         }
-
-
-    }
-
-    override fun onStart() {
-        super.onStart()
-
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
@@ -145,10 +138,6 @@ class SignInActivity : AppCompatActivity() {
     }
 
 
-
-
-
-    }
 
     private fun handleFacebookAccessToken(token: AccessToken) {
         Log.d(TAG, "handleFacebookAccessToken:$token")
