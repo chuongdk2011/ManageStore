@@ -1,0 +1,12 @@
+<resources>
+    <string name="app_name">MyApp</string>
+    <string name="sign_in">Sign In</string>
+    <string name="sign_up">Sign Up</string>
+
+
+    <string name="facebook_app_id">1432549997311802</string>
+    <string name="fb_login_protocol_scheme">fb1432549997311802</string>
+    <string name="facebook_client_token">56789</string>
+
+
+</resources>
