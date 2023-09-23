@@ -22,7 +22,10 @@ import com.facebook.login.LoginResult
 import com.google.firebase.auth.FacebookAuthProvider
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.ValueEventListener
 
 
 class SignInActivity : AppCompatActivity() {
@@ -45,7 +48,7 @@ class SignInActivity : AppCompatActivity() {
     private lateinit var callbackManager: CallbackManager
     private val TAG = "chuongdk"
     private lateinit var auth: FirebaseAuth
-
+    lateinit var dto: UserDTO
 
     //    LoginManager.getInstance().logInWithReadPermissions(this, Arrays.asList("public_profile"));
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -123,6 +126,7 @@ class SignInActivity : AppCompatActivity() {
 
             })
         img_fb.setOnClickListener {
+            
             LoginManager.getInstance()
                 .logInWithReadPermissions(this, listOf("public_profile,email"))
 
@@ -138,7 +142,6 @@ class SignInActivity : AppCompatActivity() {
     }
 
 
-
     private fun handleFacebookAccessToken(token: AccessToken) {
         Log.d(TAG, "handleFacebookAccessToken:$token")
 
@@ -150,20 +153,39 @@ class SignInActivity : AppCompatActivity() {
                     Log.d(TAG, "signInWithCredential:success")
                     val user = auth.currentUser!!
 
+                    val databaseReference = FirebaseDatabase.getInstance().reference.child("Users")
+                    val currentFirebaseUser = FirebaseAuth.getInstance().currentUser
+                    val uid = currentFirebaseUser!!.uid
 
-                    var myRef = FirebaseDatabase.getInstance().getReference("Users")
-                    var id = user.uid
-                    var dto = UserDTO(id, user.displayName!!, user.email!!, user.photoUrl.toString());
-                    myRef.child(id).setValue(dto).addOnCanceledListener {
-                    }.addOnFailureListener {
-                        Log.e(TAG, "handleFacebookAccessToken: " + it.message)
-                    }
 
+
+                    dto = UserDTO()
+                    dto.id = uid
+                    dto.fullname = user.displayName!!
+                    dto.email = user.email!!
+                    dto.avt = user.photoUrl.toString()
+
+                    databaseReference.addListenerForSingleValueEvent(object : ValueEventListener{
+                        override fun onDataChange(snapshot: DataSnapshot) {
+                            if (snapshot.hasChild(uid)) {
+                                //Old User
+                                userAlreadyExistsScore();
+
+                            } else {
+                                // User Not Yet Exists
+                                newUserScore();
+                            }
+                        }
+                        override fun onCancelled(error: DatabaseError) {
+                            TODO("Not yet implemented")
+                        }
+
+                    })
                     Log.e(
                         TAG,
-                        "handleFacebookAccessToken: " + user.displayName + "email" + user.email
+                        "handleFacebookAccessToken: " + user.displayName + " email= " + user.email
                     )
-                    updateUI(user)
+
                 } else {
                     // If sign in fails, display a message to the user.
                     Log.w(TAG, "signInWithCredential:failure" + task.exception, task.exception)
@@ -182,6 +204,49 @@ class SignInActivity : AppCompatActivity() {
             val intent = Intent(this@SignInActivity, MainActivity::class.java)
             intent.putExtra("name", user.displayName)
             intent.putExtra("email", user.email)
+            startActivity(intent)
+        }
+    }
+
+    private fun newUserScore() {
+        val databaseReference = FirebaseDatabase.getInstance().reference.child("Users")
+        val UserId = databaseReference.child(auth.getCurrentUser()!!.uid)
+
+        UserId
+            .setValue(dto)
+            .addOnCanceledListener {
+                Toast.makeText(this, "Success", Toast.LENGTH_SHORT).show()
+            }
+            .addOnFailureListener {
+
+                Log.e(TAG, "handleFacebookAccessToken: " + it.message)
+            }
+        Toast.makeText(this@SignInActivity, "Sign in Successful", Toast.LENGTH_SHORT).show()
+        val main2 = Intent(this@SignInActivity, MainActivity::class.java)
+        startActivity(main2)
+    }
+
+    private fun userAlreadyExistsScore() {
+        val user = auth.currentUser
+        val databaseReference = FirebaseDatabase.getInstance().getReference("Users")
+        val UserId = databaseReference.child(auth.currentUser!!.uid)
+        if (user != null) {
+            val valueEventListener: ValueEventListener = object : ValueEventListener {
+                override fun onDataChange(dataSnapshot: DataSnapshot) {
+
+
+                    val userDTO = dataSnapshot.getValue(UserDTO::class.java)
+                    Log.d(TAG, "onDataChange: "+userDTO!!.address)
+                    UserId.setValue(userDTO)
+                }
+
+                override fun onCancelled(databaseError: DatabaseError) {
+
+                }
+            }
+            UserId.addListenerForSingleValueEvent(valueEventListener)
+            Toast.makeText(this@SignInActivity, "Sign in Successful", Toast.LENGTH_SHORT).show()
+            val intent = Intent(this@SignInActivity, MainActivity::class.java)
             startActivity(intent)
         }
     }
